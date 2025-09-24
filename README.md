@@ -1,7 +1,11 @@
-# SistemaVendas-Paylume
-# 🚀 Sistema de Ponto de Venda – Projeto Full-Stack
-
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow) ![Tecnologias](https://img.shields.io/badge/Tech-React%20|%20SpringBoot%20|%20MySQL-blue)
+<div align="center">
+  <img src="logoPaylume.png" alt="Logo do Sistema" width="200"/>
+  <h1>SistemaVendas-Paylume</h1>
+  <p>
+    <img src="https://img.shields.io/badge/status-em%20desenvolvimento-yellow" alt="Status"/>
+    <img src="https://img.shields.io/badge/Tech-React%20|%20SpringBoot%20|%20MySQL-blue" alt="Tecnologias"/>
+  </p>
+</div>
 
 Irei construir uma plataforma de ponto de venda pronta para produção para shoppings, supermercados e redes de varejo usando **React**, **Spring Boot** e **MySQL**.
 
