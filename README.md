@@ -92,3 +92,95 @@ O projeto **vai impulsionar meu currículo**, me preparar para entrevistas e pro
 ## ⚠ Observação
 
 Irei **modificar o sistema constantemente**, adicionando melhorias e fazendo **muitos commits** para registrar cada evolução do projeto.
+
+
+---
+
+
+
+
+## 🚀 Inicialização do Projeto
+
+O projeto **Lucrux** (RuanSistemaVendas) foi criado utilizando o **Spring Initializr** com as seguintes configurações:
+
+- **Java:** 21  
+- **Gerenciador de Dependências:** Maven  
+- **Grupo (Group):** `br.com.ruan`  
+- **Artefato (Artifact):** `RuanSistemaVendas`  
+- **Nome do Projeto:** `RuanSistemaVendas`  
+- **Descrição:** Sistema de vendas Lucrux  
+- **Pacote Base:** `br.com.ruan`  
+- **Versão do Spring Boot:** 3.5.6 *(ou a que estiver utilizando)*  
+- **Empacotamento:** Jar  
+- **Dependências iniciais:** 
+
+
+## ⚙️ Configuração do Projeto & Dependências
+
+> ⚠️ **Aviso:** Nem todas as dependências listadas estão disponíveis diretamente no Spring Initializr. Algumas precisarão ser adicionadas manualmente ao arquivo `pom.xml` ou pesquisadas para integração no projeto.
+
+### 🔹 Spring Boot Starters
+
+| Dependência | Descrição |
+| --- | --- |
+| `spring-boot-starter-data-jpa` | Suporte para trabalhar com bancos de dados usando JPA & Hibernate. |
+| `spring-boot-starter-security` | Habilita Spring Security para login, perfis de usuário e autenticação. |
+| `spring-boot-starter-web` | Necessário para criar APIs RESTful usando Spring MVC. |
+| `spring-boot-starter-validation` | Habilita validação de requisições com anotações como `@NotNull`, `@Email`, etc. |
+| `spring-boot-starter-mail` | Permite enviar notificações por e-mail (ex.: confirmação, recibos). |
+
+
+
+### 🧪 Dependências para Testes
+
+| Dependência | Descrição |
+| --- | --- |
+| `spring-boot-starter-test` | Inclui JUnit, Mockito e Spring Test para testes unitários e de integração. |
+| `spring-security-test` | Permite testar endpoints seguros (autenticação e autorização). |
+
+
+
+### 🛠️ Ferramentas de Desenvolvimento
+
+| Dependência | Descrição |
+| --- | --- |
+| `spring-boot-devtools` | Reinicia automaticamente o servidor ao alterar o código (útil no desenvolvimento). |
+| `lombok` | Reduz código repetitivo gerando getters, setters, construtores, etc. (usando `@Getter`, `@Setter`, etc.) |
+
+
+
+### 🗄️ Banco de Dados
+
+| Dependência | Descrição |
+| --- | --- |
+| `mysql-connector-j` | Driver JDBC para conectar a aplicação Spring Boot ao MySQL. |
+
+
+
+### 🔐 JWT (JSON Web Token)
+
+| Dependência | Descrição |
+| --- | --- |
+| `jjwt-api` | API principal para criar e validar tokens JWT. |
+| `jjwt-impl` | Implementação runtime do JWT (necessário para assinatura de tokens). |
+| `jjwt-jackson` | Integra JWT com Jackson para parsing JSON do payload. |
+
+
+
+### 💳 Gateways de Pagamento
+
+| Dependência | Descrição |
+| --- | --- |
+| `razorpay-java` | SDK Java para integrar pagamentos Razorpay. |
+| `stripe-java` | SDK Java para integrar pagamentos Stripe. |
+
+
+
+### 🛠️ Plugin de Build (Maven)
+
+| Plugin | Descrição |
+| --- | --- |
+| `spring-boot-maven-plugin` | Plugin Maven usado para empacotar e executar aplicações Spring Boot de forma simplificada. |
+
+
+
