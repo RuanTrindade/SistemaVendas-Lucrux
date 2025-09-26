@@ -23,7 +23,7 @@ public class SecurityConfig {
     public SecurityFilterChain segurancaSistema(HttpSecurity seguranca) throws Exception {
 
 
-        HttpSecurity httpSecurity = seguranca
+        return seguranca
                 .sessionManagement(sessao ->
                         sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(autorizacao ->
