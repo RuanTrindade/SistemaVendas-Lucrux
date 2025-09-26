@@ -348,3 +348,288 @@ spring.datasource.password=1910
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 ````
 > ⚠️ Lembre-se de ajustar a senha e o nome do banco se estiver diferente na sua máquina. Assim como padrão é o MySQL rodar na porta `3306`, mas no meu caso estava dando como ocupada ai troquei para `3307`.
+
+
+---
+
+## 🔒 Configuração de Segurança do Sistema
+
+
+### 🔐 SecurityConfig.java
+**Caminho:** `src/main/java/br/com/ruan/config/SecurityConfig.java`
+
+```java
+package br.com.ruan.config;
+
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.Collections;
+
+@Configuration
+public class SecurityConfig {
+
+
+    @Bean
+    public SecurityFilterChain segurancaSistema(HttpSecurity seguranca) throws Exception {
+
+
+        return seguranca
+                .sessionManagement(sessao ->
+                        sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(autorizacao ->
+                        autorizacao.requestMatchers("/api/**").authenticated()
+                                .requestMatchers("/api/super-admin/**")
+                                .hasRole("ADMIN")
+                                .anyRequest().permitAll()
+                ).addFilterBefore(new JwtValidar(),
+                        BasicAuthenticationFilter.class)
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(
+                        cors -> cors.configurationSource(corsConfigrationSource())
+                ).build();
+
+
+    }
+
+
+    private CorsConfigurationSource corsConfigrationSource() {
+        return new CorsConfigurationSource() {
+            @Override
+            public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+                CorsConfiguration cfg = new CorsConfiguration();
+                cfg.setAllowedOrigins(
+                        Arrays.asList(
+                                "http://localhost:5173",
+                                "http://localhost:3000"
+                        )
+
+                );
+                cfg.setAllowedMethods(Collections.singletonList("*"));
+                cfg.setAllowCredentials(true);
+                cfg.setAllowedHeaders(Collections.singletonList("*"));
+                cfg.setExposedHeaders(Arrays.asList("Authorization"));
+                cfg.setMaxAge(3600L);
+                return cfg;
+            }
+        };
+    }
+}
+````
+
+> Classe central de configuração de segurança do sistema.  
+Responsável por:
+>
+> - Definir a política de sessões (`STATELESS`) para REST APIs.
+> - Configurar autorização de endpoints:
+>  - `/api/**` → autenticado
+>  - `/api/super-admin/**` → apenas ADMIN
+>  - demais → permitidos a todos
+> - Adicionar o filtro de validação de JWT (`JwtValidar`) antes da autenticação básica.
+> - Configurar CSRF (desabilitado) e CORS com origens, métodos e headers permitidos.
+> - Expor o header `"Authorization"` para o frontend.
+
+
+---
+
+
+### 🛡️ JwtValidar.java
+**Caminho:** `src/main/java/br/com/ruan/config/JwtValidar.java`
+
+```java
+package br.com.ruan.config;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import javax.crypto.SecretKey;
+import java.io.IOException;
+import java.util.List;
+
+public class JwtValidar extends OncePerRequestFilter {
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
+
+        String token = request.getHeader(JwtConstante.JWT_HEADER);
+
+        // Token JWT de acesso
+        if(token != null){
+            token = token.substring(7);
+
+            try{
+                SecretKey senha = Keys.hmacShaKeyFor(JwtConstante.JWT_SECRETO.getBytes());
+                Claims dados = Jwts.parser()
+                        .verifyWith(senha)
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+
+                String email = String.valueOf(dados.get("email"));
+                String permissoes = String.valueOf(dados.get("authorities"));
+
+                List<GrantedAuthority> permissoesDoUsuario = AuthorityUtils.commaSeparatedStringToAuthorityList(
+                        permissoes
+                );
+
+                Authentication autenticacao = new UsernamePasswordAuthenticationToken(
+                        email, null, permissoesDoUsuario
+                );
+
+                SecurityContextHolder.getContext().setAuthentication(autenticacao);
+            } catch (Exception erro){
+                throw new BadCredentialsException("Token JWT inválido");
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+````
+
+> Descrição:
+> Filtro de validação de JWT para o sistema.
+> Responsável por:
+>
+> Capturar o token JWT do header "Authorization" (Bearer).
+>
+> Validar o token utilizando a chave secreta (JWT_SECRETO).
+>
+> Extrair informações de:
+>
+> "email" → email do usuário
+>
+> "authorities" → permissões/roles do usuário
+>
+> Criar uma autenticação (UsernamePasswordAuthenticationToken) e inserir no contexto de segurança.
+>
+> Lançar BadCredentialsException caso o token seja inválido.
+
+---
+
+
+### 🔑 JwtConstante.java
+
+**Caminho:** `src/main/java/br/com/ruan/config/JwtConstante.java`
+
+````java
+package br.com.ruan.config;
+
+public class JwtConstante {
+    public static final String JWT_SECRETO = "minhaChaveSecretaSuperSegura1234567890";
+    public static final String JWT_HEADER = "Authorization";
+}
+
+````
+> Descrição:
+> Classe de constantes do JWT para o sistema.
+> Responsável por:
+>
+> Armazenar a chave secreta (JWT_SECRETO) utilizada para gerar e validar tokens JWT.
+>
+> Definir o nome do header HTTP (Authorization) que contém o token JWT.
+
+---
+
+
+### 🏭 JwtFornecedor.java
+
+**Caminho:** `src/main/java/br/com/ruan/config/JwtFornecedor.java`
+
+```java
+package br.com.ruan.config;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+@Service
+public class JwtFornecedor {
+
+    static SecretKey senha = Keys.hmacShaKeyFor(JwtConstante.JWT_SECRETO.getBytes());
+
+    public String gerarToken(Authentication autenticacao){
+
+        Collection<? extends GrantedAuthority> permissoes =
+                autenticacao.getAuthorities();
+
+        String permissoesUsuario = gerarConjuntoPermissoes(permissoes);
+
+        return Jwts.builder()
+                .issuedAt(new Date())
+                .expiration(new Date(new Date().getTime()+ 86400000))
+                .claim("email",autenticacao.getName())
+                .claim("authorities", permissoesUsuario)
+                .signWith(senha)
+                .compact();
+    }
+
+    public String getEmailFromToken(String token){
+        token = token.substring(7);
+        Claims dados = Jwts.parser()
+                .verifyWith(senha)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return String.valueOf(dados.get("email"));
+    }
+
+    private String gerarConjuntoPermissoes(Collection<? extends GrantedAuthority> permissoes) {
+
+        Set<String> conjuntoPermissoes = new HashSet<>();
+        for(GrantedAuthority permissao : permissoes){
+            conjuntoPermissoes.add(permissao.getAuthority());
+        }
+
+        return String.join(",", conjuntoPermissoes);
+    }
+}
+````
+
+> Descrição:
+> Serviço responsável por gerar e manipular tokens JWT para o sistema.
+> Responsável por:
+>
+> - Gerar token JWT contendo:
+>   - "email" → email do usuário
+>   - "authorities" → permissões/roles do usuário
+>   - Data de emissão (issuedAt) e expiração (expiration)
+> - Utilizar a chave secreta (JWT_SECRETO) para assinatura do token.
+> - Extrair o email do usuário a partir de um token JWT.
+> - Converter permissões do usuário em uma string separada por vírgula para inclusão no token.
+
