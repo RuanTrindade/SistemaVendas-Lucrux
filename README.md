@@ -352,7 +352,7 @@ spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 ---
 
-## 🔒 Configuração de Segurança do Sistema
+# 🔒 Configuração de Segurança do Sistema
 
 
 ### 🔐 SecurityConfig.java
@@ -633,3 +633,200 @@ public class JwtFornecedor {
 > - Extrair o email do usuário a partir de um token JWT.
 > - Converter permissões do usuário em uma string separada por vírgula para inclusão no token.
 
+
+---
+
+# 👥 Estrutura de Usuários do Sistema
+
+### 👤 Usuario.java
+
+**Caminho:** `src/main/java/br/com/ruan/componente/Usuario.java`
+
+````java
+package br.com.ruan.componente;
+
+import br.com.ruan.dominio.FuncaoUsuario;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.validation.constraints.Email;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode
+public class Usuario {
+
+    @Id
+    private Long id;
+
+    @Column(nullable = false)
+    private String nomeInteiro;
+
+    @Column(nullable = false, unique = true)
+    @Email(message = "O email deve ser válido")
+    private String email;
+
+    private String celular;
+
+    @Column(nullable = false)
+    private FuncaoUsuario funcao;
+
+    @Column(nullable = false)
+    private String senha;
+
+    private LocalDateTime criadoEm;
+    private LocalDateTime atualizadoEm;
+    private LocalDateTime ultimoLogin;
+}
+````
+
+> Descrição:
+> Entidade que representa um usuário do sistema.
+> Responsável por armazenar:
+>
+> • id → Identificador único
+> 
+> • nomeInteiro → Nome completo do usuário
+> 
+> • email → Único e validado com anotação @Email
+> 
+> • celular → Contato opcional
+> 
+> • funcao → Enum FuncaoUsuario indicando o papel do usuário
+> 
+> • senha → Senha armazenada (criptografada posteriormente)
+> 
+> • criadoEm, atualizadoEm, ultimoLogin → Datas de auditoria
+
+
+---
+
+
+### 🏷️ FuncaoUsuario.java
+
+**Caminho:** `src/main/java/br/com/ruan/dominio/FuncaoUsuario.java`
+
+````java
+package br.com.ruan.dominio;
+
+public enum FuncaoUsuario {
+
+    USUARIO,
+    ADMINISTRADOR,
+    CAIXA,
+    GERENTE_FILIAL,
+    GERENTE_LOJA
+
+}
+````
+
+> Descrição:
+> Enum que representa os papéis/funções de um usuário no sistema.
+> Responsável por definir os tipos de usuários que podem existir:
+>
+> • USUARIO → Usuário comum do sistema
+> 
+> • ADMINISTRADOR → Usuário com permissões administrativas
+>
+> • CAIXA → Usuário responsável por operações de caixa
+>
+> • GERENTE_FILIAL → Gerente de filial, com permissões específicas da filial
+>
+> • GERENTE_LOJA → Gerente da loja, com permissões abrangentes sobre a loja
+
+
+---
+
+
+### 📦 UsuarioRepository.java
+
+**Caminho:** `src/main/java/br/com/ruan/repository/UsuarioRepository.java`
+````java
+package br.com.ruan.repository;
+
+import br.com.ruan.componente.Usuario;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+
+    Usuario findByEmail(String email);
+
+}
+````
+
+> Descrição:
+> Interface de repositório para a entidade Usuario.
+> Responsável por:
+> 
+> • Estender JpaRepository para fornecer operações CRUD automaticamente.
+>
+> • Definir método findByEmail(String email) para buscar usuários pelo email, permitindo autenticação e consultas personalizadas.
+
+---
+
+
+### 👤 ImplementacaoUsuario.java
+
+**Caminho:** `src/main/java/br/com/ruan/service/implementacao/ImplementacaoUsuario.java`
+````java
+package br.com.ruan.service.implementacao;
+
+import br.com.ruan.componente.Usuario;
+import br.com.ruan.repository.UsuarioRepository;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import java.util.Collection;
+import java.util.Collections;
+
+@Service
+public class ImplementacaoUsuario implements UserDetailsService {
+
+    private UsuarioRepository usuarioRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+
+        Usuario usuario = usuarioRepository.findByEmail(email);
+
+        if(usuario == null){
+            throw new UsernameNotFoundException("Usuário não encontrado");
+        }
+
+        GrantedAuthority autoridade = new SimpleGrantedAuthority(
+                usuario.getFuncao().toString()
+        );
+
+        Collection<GrantedAuthority> autoridades =
+                Collections.singletonList(autoridade);
+
+        return new org.springframework.security.core.userdetails.User(
+                usuario.getEmail(), usuario.getSenha(), autoridades
+        );
+
+    }
+
+}
+````
+
+> Descrição:
+> Classe de serviço que implementa UserDetailsService do Spring Security.
+> Responsável por:
+>
+> • Buscar um usuário pelo email via UsuarioRepository.
+>
+> • Lançar UsernameNotFoundException caso o usuário não exista.
+>
+> • Criar um objeto GrantedAuthority com base na função do usuário (FuncaoUsuario).
+> 
+> • Retornar um UserDetails do Spring Security com email, senha e autoridades do usuário para autenticação.
